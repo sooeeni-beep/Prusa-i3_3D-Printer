@@ -123,4 +123,156 @@ Do not assume axis directions or endstop electrical polarity solely from the pho
 
 ## Marlin configuration change log
 
-No configuration changes have been committed yet. This section will be updated together with each firmware configuration change.
+### 2026-09-30 — Initial hardware-specific baseline
+
+`Configuration.h` was changed from the raw Marlin defaults to a commissioning configuration for this printer.
+
+#### Identity and controller
+
+- `STRING_CONFIG_H_AUTHOR` changed from the default placeholder to `(sooeeni-beep, custom Prusa i3)`.
+- `CUSTOM_MACHINE_NAME` enabled as `Prusa i3 Custom`.
+- `MOTHERBOARD` remains `BOARD_RAMPS_14_EFB`, matching one hotend + fan + heated-bed control on RAMPS 1.4.
+- Serial communication remains `SERIAL_PORT 0` at `250000` baud.
+
+#### Stepper drivers
+
+Changed all installed drivers from the raw A4988 defaults to standalone TMC2208:
+
+```cpp
+#define X_DRIVER_TYPE  TMC2208_STANDALONE
+#define Y_DRIVER_TYPE  TMC2208_STANDALONE
+#define Z_DRIVER_TYPE  TMC2208_STANDALONE
+#define E0_DRIVER_TYPE TMC2208_STANDALONE
+```
+
+Reason: the physical modules are TMC2208 StepSticks with no UART wiring. RAMPS MS1/MS2/MS3 jumpers are fitted. In standalone operation MS1=HIGH and MS2=HIGH select a 1/16 STEP input resolution.
+
+#### Motion calibration baseline
+
+Changed:
+
+```cpp
+#define DEFAULT_AXIS_STEPS_PER_UNIT { 80, 80, 1600, 93 }
+```
+
+- X = 80 steps/mm — calculated from 200 steps/rev × 16 microsteps / (20 teeth × 2 mm).
+- Y = 80 steps/mm — same transmission as X.
+- Z = 1600 steps/mm — calculated from 200 steps/rev × 16 microsteps / 2 mm lead.
+- E = 93 steps/mm — **provisional safe starting value only** for the MK8 direct extruder. It must be calibrated by commanding a known filament length and measuring the actual feed before printing.
+
+The Z value replaces the raw Marlin value of 400 steps/mm, which was not compatible with the installed single-start 2 mm-lead screws at 1/16 STEP resolution.
+
+#### Conservative commissioning motion limits
+
+The raw Marlin motion limits were reduced for initial testing:
+
+```cpp
+#define DEFAULT_MAX_FEEDRATE          { 150, 150, 4, 25 }
+#define DEFAULT_MAX_ACCELERATION      { 1000, 1000, 100, 5000 }
+#define DEFAULT_ACCELERATION          800
+#define DEFAULT_RETRACT_ACCELERATION  1000
+#define DEFAULT_TRAVEL_ACCELERATION   1000
+```
+
+These are commissioning values, not final performance tuning values.
+
+#### Thermistors
+
+Both raw sensor selections were changed from table 1 to table 11:
+
+```cpp
+#define TEMP_SENSOR_0   11
+#define TEMP_SENSOR_BED 11
+```
+
+Reason: the installed sensors are NTC 100K Beta 3950. Marlin 2.1.2.6 describes sensor table 11 as a 100K Beta-3950 thermistor table.
+
+#### Temperature limits
+
+Hotend:
+
+```cpp
+#define HEATER_0_MAXTEMP 260
+#define HOTEND_OVERSHOOT 15
+```
+
+This gives a maximum normal target of 245 °C with Marlin's 15 °C overshoot reserve. This is a conservative initial limit for the installed MK8-style hotend until its exact heat-break/PTFE construction is confirmed.
+
+Heated bed:
+
+```cpp
+#define BED_MAXTEMP   110
+#define BED_OVERSHOOT 10
+```
+
+Marlin forbids a normal target above `MAXTEMP - OVERSHOOT`, so these values cap the user-set bed target at **100 °C**, while retaining a 10 °C fault margin for overshoot detection.
+
+`THERMAL_PROTECTION_HOTENDS` and `THERMAL_PROTECTION_BED` remain enabled.
+
+#### Endstops and probe
+
+- X, Y and Z continue to use the MIN endstop connectors.
+- The three endstop inversion values remain `false` as an initial NC-to-GND assumption.
+- `Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN` was disabled because no bed probe / BLTouch is installed.
+- Endstop polarity **must be verified with `M119` before the first `G28`**.
+
+#### EEPROM
+
+Enabled:
+
+```cpp
+#define EEPROM_SETTINGS
+#define EEPROM_AUTO_INIT
+```
+
+This allows calibrated settings to be stored with `M500`.
+
+After flashing this hardware-specific configuration for the first time, initialize the stored settings with:
+
+```gcode
+M502
+M500
+```
+
+#### LCD and SD card
+
+Enabled:
+
+```cpp
+#define SDSUPPORT
+#define REPRAP_DISCOUNT_SMART_CONTROLLER
+```
+
+This matches the installed character RepRapDiscount Smart Controller and its onboard SD-card slot.
+
+#### Geometry retained for commissioning
+
+The following raw values were intentionally kept for the first commissioning build:
+
+```cpp
+#define X_BED_SIZE 200
+#define Y_BED_SIZE 200
+#define Z_MAX_POS  200
+```
+
+The physical heated bed is approximately 210 × 210 mm, but usable nozzle travel should be measured before increasing the printable area.
+
+#### Configuration_adv.h
+
+No hardware-specific changes were required in `Configuration_adv.h` for the first commissioning build. TMC2208 UART current control and diagnostics are intentionally not enabled because the installed drivers are being used in standalone mode.
+
+## First-flash validation sequence
+
+After compiling and uploading Marlin, do **not** immediately home or heat the printer. Use this order:
+
+1. Confirm the LCD starts and the SD card is detected.
+2. Connect over USB at 250000 baud.
+3. Check that hotend and bed both report plausible room temperature.
+4. Send `M119` with all endstops released.
+5. Press X, Y and Z switches individually and repeat `M119` to confirm each changes state correctly.
+6. Make short manual movements on X/Y/Z while staying away from the endstops and confirm direction.
+7. Only after direction and endstop logic are verified, run `G28`.
+8. Test hotend heating at a low target first while continuously watching the reported temperature.
+9. Test bed heating separately.
+10. Calibrate E-steps, then store the final value with `M500`.
+11. Tune hotend PID and save it. Bed PID is not enabled in this baseline.
