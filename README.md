@@ -2,7 +2,7 @@
 
 This repository documents the actual hardware of this custom Prusa i3 and the Marlin configuration used for it.
 
-> **Firmware baseline:** Marlin 2.1.2.6 configuration files  
+> **Firmware baseline:** Marlin 2.1.2.8 runtime with configuration files originally carrying `CONFIGURATION_H_VERSION 02010206`  
 > **Controller:** Arduino Mega 2560 + RAMPS 1.4  
 > **Power system:** 12 V DC
 
@@ -260,6 +260,62 @@ The physical heated bed is approximately 210 × 210 mm, but usable nozzle travel
 #### Configuration_adv.h
 
 No hardware-specific changes were required in `Configuration_adv.h` for the first commissioning build. TMC2208 UART current control and diagnostics are intentionally not enabled because the installed drivers are being used in standalone mode.
+
+## 2026-10-02 — Commissioning and thermal-control update
+
+The first hardware commissioning pass was completed successfully.
+
+### Verified hardware behavior
+
+- X, Y and Z mechanical MIN endstops were rewired to use only RAMPS `S` and `-` (GND), with the +5 V pin unused.
+- `M119` verified all three endstops as `open` when released and `TRIGGERED` when pressed.
+- X homes left, Y homes rearward, and Z homes downward toward the bed.
+- X/Y/Z motion was verified as smooth with no stepper chatter or abnormal heating.
+- Four TMC2208 modules are installed in the correct orientation and operate stably in standalone STEP/DIR mode.
+- Hotend and bed thermistors both report plausible ambient temperatures.
+- Hotend heating was verified to 180 °C and bed heating was verified to 40 °C.
+- The two electronics cooling fans (RAMPS/TMC2208 and external bed MOSFET cooling) were moved off D9 and connected to permanent 12 V so they run whenever the printer PSU is on.
+- Measured supply at the external bed MOSFET input was approximately 12.03–12.10 V.
+
+### Tuned hotend PID defaults
+
+Hotend PID autotune produced:
+
+```cpp
+#define DEFAULT_KP  15.60
+#define DEFAULT_KI   1.00
+#define DEFAULT_KD  60.76
+```
+
+These values were first stored in EEPROM with `M301` + `M500`, then promoted into `Configuration.h` so they survive a future `M502`.
+
+### Bed PID enabled
+
+Bed control was changed from bang-bang to PID by enabling:
+
+```cpp
+#define PIDTEMPBED
+```
+
+The existing bed PID constants are only temporary defaults until the actual MK2B bed is autotuned after this firmware is flashed.
+
+Recommended bed autotune after upload and EEPROM reset:
+
+```gcode
+M303 E-1 S60 C8
+```
+
+After autotune, record the returned bed Kp/Ki/Kd values, store them in EEPROM, and then promote them into `Configuration.h` as final defaults.
+
+### Preheat safety alignment
+
+The ABS preset bed temperature was reduced from 110 °C to 100 °C:
+
+```cpp
+#define PREHEAT_2_TEMP_BED 100
+```
+
+This aligns the preset with the intended maximum normal bed setpoint.
 
 ## First-flash validation sequence
 
