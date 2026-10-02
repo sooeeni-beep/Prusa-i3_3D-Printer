@@ -289,6 +289,18 @@ Hotend PID autotune produced:
 
 These values were first stored in EEPROM with `M301` + `M500`, then promoted into `Configuration.h` so they survive a future `M502`.
 
+### Final heated-bed PID autotune
+
+Bed PID autotune completed at 60 °C for 8 cycles. Final constants:
+
+```cpp
+#define DEFAULT_BED_KP 25.89
+#define DEFAULT_BED_KI 0.81
+#define DEFAULT_BED_KD 551.42
+```
+
+These values are now stored in `Configuration.h` as the firmware defaults for the installed MK2B bed and external MOSFET stage.
+
 ### Bed PID enabled
 
 Bed control was changed from bang-bang to PID by enabling:
