@@ -3782,32 +3782,36 @@
 // @section custom config menu
 
 // Custom Menu: Configuration Menu
-//#define CUSTOM_MENU_CONFIG
+// Project-specific calibration utilities for the Prusa i3 Custom.
+// Each PID autotune applies the new result (U1) and then stores it to EEPROM (M500).
+// "Factory Settings" restores the hardcoded defaults from Configuration.h (M502)
+// and immediately stores those defaults to EEPROM (M500).
+#define CUSTOM_MENU_CONFIG
 #if ENABLED(CUSTOM_MENU_CONFIG)
-  //#define CUSTOM_MENU_CONFIG_TITLE "Custom Commands"
-  #define CUSTOM_MENU_CONFIG_SCRIPT_DONE "M117 Wireless Script Done"
+  #define CUSTOM_MENU_CONFIG_TITLE "Calibration"
+  #define CUSTOM_MENU_CONFIG_SCRIPT_DONE "M117 Calibration Done"
   #define CUSTOM_MENU_CONFIG_SCRIPT_AUDIBLE_FEEDBACK
   //#define CUSTOM_MENU_CONFIG_SCRIPT_RETURN  // Return to status screen after a script
   #define CUSTOM_MENU_CONFIG_ONLY_IDLE        // Only show custom menu when the machine is idle
 
-  #define CONFIG_MENU_ITEM_1_DESC "Wifi ON"
-  #define CONFIG_MENU_ITEM_1_GCODE "M118 [ESP110] WIFI-STA pwd=12345678"
-  //#define CONFIG_MENU_ITEM_1_CONFIRM        // Show a confirmation dialog before this action
+  #define CONFIG_MENU_ITEM_1_DESC "Hotend PID 200C"
+  #define CONFIG_MENU_ITEM_1_GCODE "M303 E0 S200 C8 U1\nM500"
+  #define CONFIG_MENU_ITEM_1_CONFIRM          // Confirm before starting a long heater autotune
 
-  #define CONFIG_MENU_ITEM_2_DESC "Bluetooth ON"
-  #define CONFIG_MENU_ITEM_2_GCODE "M118 [ESP110] BT pwd=12345678"
-  //#define CONFIG_MENU_ITEM_2_CONFIRM
+  #define CONFIG_MENU_ITEM_2_DESC "Bed PID 60C"
+  #define CONFIG_MENU_ITEM_2_GCODE "M303 E-1 S60 C8 U1\nM500"
+  #define CONFIG_MENU_ITEM_2_CONFIRM          // Confirm before starting a long heater autotune
 
-  //#define CONFIG_MENU_ITEM_3_DESC "Radio OFF"
-  //#define CONFIG_MENU_ITEM_3_GCODE "M118 [ESP110] OFF pwd=12345678"
-  //#define CONFIG_MENU_ITEM_3_CONFIRM
+  #define CONFIG_MENU_ITEM_3_DESC "Factory Settings"
+  #define CONFIG_MENU_ITEM_3_GCODE "M502\nM500"
+  #define CONFIG_MENU_ITEM_3_CONFIRM          // Prevent accidental loss of EEPROM tuning
 
-  //#define CONFIG_MENU_ITEM_4_DESC "Wifi ????"
-  //#define CONFIG_MENU_ITEM_4_GCODE "M118 ????"
+  //#define CONFIG_MENU_ITEM_4_DESC "Store Settings"
+  //#define CONFIG_MENU_ITEM_4_GCODE "M500"
   //#define CONFIG_MENU_ITEM_4_CONFIRM
 
-  //#define CONFIG_MENU_ITEM_5_DESC "Wifi ????"
-  //#define CONFIG_MENU_ITEM_5_GCODE "M118 ????"
+  //#define CONFIG_MENU_ITEM_5_DESC "Load Settings"
+  //#define CONFIG_MENU_ITEM_5_GCODE "M501"
   //#define CONFIG_MENU_ITEM_5_CONFIRM
 #endif
 
