@@ -344,3 +344,45 @@ After compiling and uploading Marlin, do **not** immediately home or heat the pr
 9. Test bed heating separately.
 10. Calibrate E-steps, then store the final value with `M500`.
 11. Tune hotend PID and save it. Bed PID is not enabled in this baseline.
+
+
+## Final calibration-menu update (2026-10-03)
+
+The extruder E-steps calibration was completed using a 100 mm feed test through the heated MK8 hotend.
+
+- Previous default: `E93.00`
+- First measured travel: 92.25 mm for a commanded 100 mm
+- First corrected value: `E100.81`
+- Confirmation measurement: approximately 99.5 mm for a commanded 100 mm
+- Final compiled factory default: **`E101.32 steps/mm`**
+
+The final value is now part of `DEFAULT_AXIS_STEPS_PER_UNIT` in `Configuration.h`:
+
+```cpp
+#define DEFAULT_AXIS_STEPS_PER_UNIT { 80, 80, 1600, 101.32 }
+```
+
+### LCD Calibration submenu
+
+`Configuration_adv.h` now enables a custom **Calibration** submenu under the LCD Configuration menu.
+
+Available actions:
+
+1. **Hotend PID 200C**
+   - Runs `M303 E0 S200 C8 U1`
+   - Applies the newly calculated PID values with `U1`
+   - Runs `M500` afterward so the new values survive power cycling
+   - Requires confirmation before starting
+
+2. **Bed PID 60C**
+   - Runs `M303 E-1 S60 C8 U1`
+   - Applies the newly calculated bed PID values
+   - Runs `M500` afterward
+   - Requires confirmation before starting
+
+3. **Factory Settings**
+   - Runs `M502` to reload the hardcoded firmware defaults
+   - Immediately runs `M500` to store those defaults in EEPROM
+   - Requires confirmation to avoid accidental loss of user tuning
+
+The factory baseline therefore includes the currently validated thermal PID values and the calibrated E-step value. Future LCD PID autotunes can change only the EEPROM copy; selecting **Factory Settings** restores the compiled baseline.
